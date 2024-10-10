@@ -7,11 +7,12 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 )
 
 func greet(w http.ResponseWriter, r *http.Request) {
-	fmt.Fprintf(w, getData())
+	fmt.Fprintf(w, cachedGames)
 }
 
 func getPeriod(period int) string {
@@ -129,8 +130,22 @@ func getData() string {
 	return string(gamesBytes)
 }
 
+var (
+	cachedGames string
+	mutex       sync.RWMutex
+)
+
+func updateData() {
+	for {
+		mutex.Lock()
+		cachedGames = getData()
+		mutex.Unlock()
+		time.Sleep(10 * time.Second)
+	}
+}
+
 func main() {
-	go getData()
+	go updateData()
 	http.HandleFunc("/", greet)
 	http.ListenAndServe(":1234", nil)
 }
